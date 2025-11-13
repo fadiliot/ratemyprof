@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+motor
+requests
+beautifulsoup4
+python-dotenv
+motor
