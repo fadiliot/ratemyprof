@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import professors, reviews, scraper
+from app.routes import professors, reviews, scraper,auth
 from app.db import db
 
 app = FastAPI(title="RateMyProfessor API")
@@ -15,6 +15,7 @@ app.add_middleware(
 )
 
 # Include route modules
+app.include_router(auth.router, prefix="/auth", tags=["Authentication"]) 
 app.include_router(professors.router, prefix="/professors", tags=["Professors"])
 app.include_router(reviews.router, prefix="/reviews", tags=["Reviews"])
 app.include_router(scraper.router, prefix="/scraper", tags=["Scraper"])

@@ -9,8 +9,3 @@ router = APIRouter(prefix="/professors", tags=["Professors"])
 async def get_professors():
     data = await professors.find({}, {"_id": 0}).to_list(100)
     return data
-
-
-
-
-
