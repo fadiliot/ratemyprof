@@ -8,11 +8,15 @@ app = FastAPI(title="RateMyProfessor API")
 # Allow frontend requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=[
+        "http://localhost:3000",
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
 
 # Include route modules
 app.include_router(auth.router, prefix="/auth", tags=["Authentication"]) 

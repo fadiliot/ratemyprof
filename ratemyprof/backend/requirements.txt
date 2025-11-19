@@ -6,3 +6,7 @@ beautifulsoup4
 python-dotenv
 motor
 playwright
+pyjwt
+passlib[bcrypt]
+python-jose
+pymongo

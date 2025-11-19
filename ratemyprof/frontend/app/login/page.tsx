@@ -1,7 +1,6 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
@@ -20,13 +19,52 @@ export default function LoginPage() {
     e.preventDefault()
     setIsLoading(true)
 
-    if (email.endsWith("@srmist.edu.in") && password) {
-      setTimeout(() => {
-        localStorage.setItem("user", JSON.stringify({ email, name: email.split("@")[0] }))
-        router.push("/dashboard")
-      }, 1000)
-    } else {
-      alert("Please use your SRM email (@srmist.edu.in)")
+    console.log("➡️ Login Started")
+    console.log("Email:", email)
+    console.log("Password entered:", password.length > 0)
+
+    if (
+      !(email.endsWith("@srmist.edu.in") || email.endsWith("@ktr.srmuniv.edu.in"))
+    ) {
+      console.log("❌ Invalid email domain")
+      alert("Please use your official SRM email (@srmist.edu.in or @ktr.srmuniv.edu.in)")
+      setIsLoading(false)
+      return
+    }
+
+    try {
+      console.log("🌐 Sending request to backend...")
+
+      const res = await fetch("http://127.0.0.1:8000/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include", // VERY IMPORTANT for cookies
+        body: JSON.stringify({ email, password }),
+      })
+
+      console.log("📥 Response received:", res)
+      console.log("Status:", res.status)
+
+      const data = await res.json()
+      console.log("📦 Response JSON:", data)
+
+      if (!res.ok) {
+        console.log("❌ Backend rejected login:", data.detail)
+        alert(data.detail || "Login failed")
+        setIsLoading(false)
+        return
+      }
+
+      console.log("✅ Login success, storing email in localStorage")
+      localStorage.setItem("user_email", email)
+
+      console.log("➡️ Attempting redirect to /dashboard")
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("🔥 ERROR during login:", error)
+      alert("Unable to connect to backend")
+    } finally {
+      console.log("⏹ Login finished")
       setIsLoading(false)
     }
   }
