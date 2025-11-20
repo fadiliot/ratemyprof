@@ -1,11 +1,19 @@
-from motor.motor_asyncio import AsyncIOMotorClient
+from pymongo import MongoClient
 import certifi
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # MongoDB Atlas connection
-MONGO_URI = "mongodb+srv://fa9471_db_user:RATEMYPROF@cluster0.7kaz2p5.mongodb.net/?appName=Cluster0"
-client = AsyncIOMotorClient(MONGO_URI)
+MONGO_URI = os.getenv("MONGO_URI")
 
-# Database and collections
+client = MongoClient(MONGO_URI, tlsCAFile=certifi.where())
+
+# Select database
 db = client["ratemyprof"]
+
+# Collections
+users_col = db["users"]
 professors_col = db["professors"]
 reviews_col = db["reviews"]
