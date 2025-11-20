@@ -11,6 +11,8 @@ interface AppHeaderProps {
   showProfileLink?: boolean
 }
 
+const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://127.0.0.1:8000"
+
 export function AppHeader({ userName, showProfileLink = true }: AppHeaderProps) {
   const pathname = usePathname()
   const router = useRouter()
@@ -18,8 +20,23 @@ export function AppHeader({ userName, showProfileLink = true }: AppHeaderProps) 
 
   const isAuthPage = pathname === "/login" || pathname === "/signup"
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // 🔐 Tell backend to clear HttpOnly JWT cookie
+      await fetch(`${API_BASE}/auth/logout`, {
+        method: "POST",
+        credentials: "include",
+      })
+    } catch (err) {
+      console.error("Logout API error:", err)
+      // even if this fails, we still clear local state
+    }
+
+    // 🧹 Clear client-side session data
     localStorage.removeItem("user")
+    localStorage.removeItem("user_email")
+
+    // 🚪 Send user to login page
     router.push("/login")
   }
 
@@ -76,15 +93,18 @@ export function AppHeader({ userName, showProfileLink = true }: AppHeaderProps) 
         <div className="md:hidden border-t border-blue-100 dark:border-blue-900 p-4 space-y-2">
           <span className="block text-sm text-gray-600 dark:text-gray-400 px-2">Welcome, {userName}</span>
           {showProfileLink && (
-            <Link href="/profile" onClick={() => setMobileMenuOpen(false)}>
+            <Link
+              href="/profile"
+              onClick={() => setMobileMenuOpen(false)}
+            >
               <Button variant="ghost" className="w-full justify-start text-primary">
                 My Profile
               </Button>
             </Link>
           )}
           <Button
-            onClick={() => {
-              handleLogout()
+            onClick={async () => {
+              await handleLogout()
               setMobileMenuOpen(false)
             }}
             variant="outline"

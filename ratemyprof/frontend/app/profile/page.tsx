@@ -26,11 +26,21 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const userData = localStorage.getItem("user")
+
     if (!userData) {
-      router.push("/login")
-      return
+      // optional: fallback to user_email if you only stored that
+      const email = localStorage.getItem("user_email")
+      if (!email) {
+        router.push("/login")
+        return
+      }
+      setUser({
+        email,
+        name: email.split("@")[0],
+      })
+    } else {
+      setUser(JSON.parse(userData))
     }
-    setUser(JSON.parse(userData))
 
     const mockRated = [
       { id: 1, name: "Dr. Sharma", rating: 5, ratedAt: "2024-11-05" },
@@ -40,8 +50,23 @@ export default function ProfilePage() {
     setRatedProfessors(mockRated)
   }, [router])
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    try {
+      // hit backend to clear HttpOnly cookie
+      await fetch("http://127.0.0.1:8000/auth/logout", {
+        method: "POST",
+        credentials: "include", // send cookie so backend can delete it
+      })
+    } catch (err) {
+      console.error("Logout API error:", err)
+      // even if API fails, still clear local state below
+    }
+
+    // clear any local "session" data
     localStorage.removeItem("user")
+    localStorage.removeItem("user_email")
+
+    // send user back to login
     router.push("/login")
   }
 
@@ -60,7 +85,9 @@ export default function ProfilePage() {
         <div className="bg-gradient-to-r from-primary/20 to-accent/20 dark:from-primary/10 dark:to-accent/10 rounded-3xl p-8 mb-8">
           <div className="flex items-end gap-6">
             <div className="w-24 h-24 bg-primary rounded-2xl flex items-center justify-center shadow-lg">
-              <span className="text-4xl font-bold text-white">{user?.name?.[0]?.toUpperCase()}</span>
+              <span className="text-4xl font-bold text-white">
+                {user?.name?.[0]?.toUpperCase()}
+              </span>
             </div>
             <div className="flex-1">
               <h1 className="text-4xl font-bold text-primary mb-2">{user?.name}</h1>
@@ -74,9 +101,12 @@ export default function ProfilePage() {
                   <Star className="w-5 h-5 text-accent" />
                   <span className="font-semibold">
                     {ratedProfessors.length > 0
-                      ? (ratedProfessors.reduce((a, b) => a + b.rating, 0) / ratedProfessors.length).toFixed(1)
+                      ? (
+                          ratedProfessors.reduce((a, b) => a + b.rating, 0) /
+                          ratedProfessors.length
+                        ).toFixed(1)
                       : 0}
-                    Ø Avg Rating
+                    {" "}Ø Avg Rating
                   </span>
                 </div>
               </div>
@@ -103,7 +133,9 @@ export default function ProfilePage() {
                     {[...Array(5)].map((_, i) => (
                       <Star
                         key={i}
-                        className={`w-5 h-5 ${i < prof.rating ? "fill-accent text-accent" : "text-gray-300"}`}
+                        className={`w-5 h-5 ${
+                          i < prof.rating ? "fill-accent text-accent" : "text-gray-300"
+                        }`}
                       />
                     ))}
                   </div>
@@ -111,7 +143,9 @@ export default function ProfilePage() {
               ))}
             </div>
           ) : (
-            <p className="text-gray-600 dark:text-gray-400">You haven't rated any professors yet</p>
+            <p className="text-gray-600 dark:text-gray-400">
+              You haven&apos;t rated any professors yet
+            </p>
           )}
         </div>
 

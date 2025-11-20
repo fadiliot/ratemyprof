@@ -29,17 +29,27 @@ async def srm_login(data: dict, response: Response):
             "createdAt": datetime.utcnow()
         })
 
-    # Create JWT
     token = create_access_token(email)
 
-    # Set HttpOnly Cookie
     response.set_cookie(
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,   # set True in production (HTTPS)
+        secure=False,   # True in production with HTTPS
         samesite="Lax",
-        max_age=60*60*24*7,  # 7 days
+        max_age=60*60*24*7,
     )
 
     return {"message": "Login successful", "email": email}
+
+
+@router.post("/logout")
+async def logout(response: Response):
+    # delete cookie on client
+    response.delete_cookie(
+        key="access_token",
+        httponly=True,
+        secure=False,   # match login
+        samesite="Lax",
+    )
+    return {"message": "Logout successful"}

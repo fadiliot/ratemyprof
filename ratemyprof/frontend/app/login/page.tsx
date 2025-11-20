@@ -1,7 +1,7 @@
 "use client"
 
 import type React from "react"
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -13,7 +13,24 @@ export default function LoginPage() {
   const [password, setPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
+  const [checkingSession, setCheckingSession] = useState(true)
   const router = useRouter()
+
+  // 🚫 Block access if user is already "logged in"
+  useEffect(() => {
+    try {
+      const existingEmail = localStorage.getItem("user_email")
+      if (existingEmail) {
+        // user already logged in → go to dashboard
+        router.replace("/dashboard")
+        return
+      }
+    } catch {
+      // ignore localStorage errors
+    } finally {
+      setCheckingSession(false)
+    }
+  }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -38,7 +55,7 @@ export default function LoginPage() {
       const res = await fetch("http://127.0.0.1:8000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // VERY IMPORTANT for cookies
+        credentials: "include", // IMPORTANT for cookies
         body: JSON.stringify({ email, password }),
       })
 
@@ -67,6 +84,15 @@ export default function LoginPage() {
       console.log("⏹ Login finished")
       setIsLoading(false)
     }
+  }
+
+  // While we’re checking existing session, avoid rendering the form
+  if (checkingSession) {
+    return (
+      <main className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-blue-50 dark:from-slate-950 dark:via-slate-900 dark:to-blue-950">
+        <p className="text-gray-600 dark:text-gray-300">Checking session...</p>
+      </main>
+    )
   }
 
   return (
@@ -124,13 +150,6 @@ export default function LoginPage() {
               {isLoading ? "Signing in..." : "Sign In"}
             </Button>
           </form>
-
-          <div className="text-center text-sm text-gray-600 dark:text-gray-400">
-            Don't have an account?{" "}
-            <Link href="/signup" className="text-primary font-semibold hover:underline">
-              Sign up
-            </Link>
-          </div>
         </div>
       </div>
     </main>

@@ -6,19 +6,10 @@ import { AppHeader } from "@/components/app-header"
 import { ProfessorCard } from "@/components/professor-card"
 import { RatingModal } from "@/components/rating-modal"
 import { Input } from "@/components/ui/input"
-import { Search, ArrowUp } from "lucide-react"
+import { Search } from "lucide-react"
 
-interface Professor {
-  id: number
-  name: string
-  faculty_id: string
-  department: string
-  courses: string[]
-  rating: number
-  ratingCount: number
-  image: string
-  rated?: boolean
-}
+import { useProfessors } from "@/lib/hooks/useProfessors"
+import type { Professor } from "@/lib/api/professor"
 
 export default function DashboardPage() {
   const router = useRouter()
@@ -35,7 +26,9 @@ export default function DashboardPage() {
 
   const [selectedProfessor, setSelectedProfessor] = useState<Professor | null>(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
-  const [showBackToTop, setShowBackToTop] = useState(false)
+
+  // 🔌 Fetch professors from backend
+  const { data: apiProfessors, loading, error } = useProfessors()
 
   // 🔥 Load login state
   useEffect(() => {
@@ -53,20 +46,15 @@ export default function DashboardPage() {
       email,
       department: userDept,
     })
-
-    // Mock professor list
-    const mock: Professor[] = [
-      { id: 1, name: "Dr. Sharma", faculty_id: "SRM001", department: "CSE", courses: ["DSA"], rating: 4.5, ratingCount: 234, image: "/professor-avatar.png" },
-      { id: 2, name: "Prof. Patel", faculty_id: "SRM002", department: "ECE", courses: ["Signals"], rating: 4.2, ratingCount: 189, image: "/professor-avatar.png" },
-      { id: 3, name: "Dr. Gupta", faculty_id: "SRM003", department: "CSE", courses: ["Backend"], rating: 4.8, ratingCount: 156, image: "/professor-avatar.png" },
-      { id: 4, name: "Prof. Kumar", faculty_id: "SRM004", department: "Mech", courses: ["Thermodynamics"], rating: 3.9, ratingCount: 112, image: "/professor-avatar.png" },
-      { id: 5, name: "Dr. Iyer", faculty_id: "SRM005", department: "CSE", courses: ["AI/ML"], rating: 4.6, ratingCount: 201, image: "/professor-avatar.png" },
-      { id: 6, name: "Prof. Singh", faculty_id: "SRM006", department: "ECE", courses: ["Microprocessors"], rating: 4.1, ratingCount: 178, image: "/professor-avatar.png" },
-    ]
-
-    setProfessors(mock)
-    setFilteredProfessors(mock)
   }, [router])
+
+  // When API data arrives, sync into local professors state
+  useEffect(() => {
+    if (apiProfessors) {
+      setProfessors(apiProfessors)
+      setFilteredProfessors(apiProfessors)
+    }
+  }, [apiProfessors])
 
   // 🔥 Filter and sort
   useEffect(() => {
@@ -167,23 +155,35 @@ export default function DashboardPage() {
         </div>
 
         {/* LIST */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredProfessors.map((prof) => (
-            <ProfessorCard
-              key={prof.id}
-              professor={prof}
-              onRate={() => {
-                setSelectedProfessor(prof)
-                setIsModalOpen(true)
-              }}
-            />
-          ))}
-        </div>
-
-        {filteredProfessors.length === 0 && (
+        {loading ? (
           <div className="text-center py-12 text-gray-600 dark:text-gray-400">
-            No professors found
+            Loading professors...
           </div>
+        ) : error ? (
+          <div className="text-center py-12 text-red-600 dark:text-red-400">
+            Error: {error}
+          </div>
+        ) : (
+          <>
+            <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredProfessors.map((prof) => (
+                <ProfessorCard
+                  key={prof.id}
+                  professor={prof}
+                  onRate={() => {
+                    setSelectedProfessor(prof)
+                    setIsModalOpen(true)
+                  }}
+                />
+              ))}
+            </div>
+
+            {filteredProfessors.length === 0 && (
+              <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+                No professors found
+              </div>
+            )}
+          </>
         )}
       </div>
 

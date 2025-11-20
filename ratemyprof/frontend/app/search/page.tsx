@@ -7,17 +7,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Star, Search, ArrowLeft } from "lucide-react"
 
-interface Professor {
-  id: number
-  name: string
-  faculty_id: string
-  department: string
-  courses: string[]
-  rating: number
-  ratingCount: number
-  image: string
-  rated?: boolean
-}
+import { useProfessors } from "@/lib/hooks/useProfessors"
+import type { Professor } from "@/lib/api/professor"
 
 export default function SearchPage() {
   const [user, setUser] = useState<any>(null)
@@ -27,73 +18,33 @@ export default function SearchPage() {
   const [departmentFilter, setDepartmentFilter] = useState("all")
   const [sortBy, setSortBy] = useState("rating")
 
+  // 🔌 Fetch from backend
+  const { data: apiProfessors, loading, error } = useProfessors()
+
+  // Load user from localStorage
   useEffect(() => {
     const userData = localStorage.getItem("user")
     if (userData) {
       setUser(JSON.parse(userData))
     }
-
-    const mockProfessors: Professor[] = [
-      {
-        id: 1,
-        name: "Dr. Sharma",
-        faculty_id: "SRM001",
-        department: "CSE",
-        courses: ["DSA", "DBMS"],
-        rating: 4.5,
-        ratingCount: 234,
-        image: "/diverse-professor-lecturing.png",
-      },
-      {
-        id: 2,
-        name: "Prof. Patel",
-        faculty_id: "SRM002",
-        department: "ECE",
-        courses: ["Signals", "Systems"],
-        rating: 4.2,
-        ratingCount: 189,
-        image: "/diverse-professor-lecturing.png",
-      },
-      {
-        id: 3,
-        name: "Dr. Gupta",
-        faculty_id: "SRM003",
-        department: "CSE",
-        courses: ["Web Dev", "Backend"],
-        rating: 4.8,
-        ratingCount: 156,
-        image: "/diverse-professor-lecturing.png",
-      },
-      {
-        id: 4,
-        name: "Prof. Kumar",
-        faculty_id: "SRM004",
-        department: "Mech",
-        courses: ["Thermodynamics"],
-        rating: 3.9,
-        ratingCount: 112,
-        image: "/diverse-professor-lecturing.png",
-      },
-      {
-        id: 5,
-        name: "Dr. Iyer",
-        faculty_id: "SRM005",
-        department: "CSE",
-        courses: ["AI/ML", "Deep Learning"],
-        rating: 4.6,
-        ratingCount: 201,
-        image: "/diverse-professor-lecturing.png",
-      },
-    ]
-    setProfessors(mockProfessors)
   }, [])
 
+  // When API professors arrive, sync into local state
+  useEffect(() => {
+    if (apiProfessors) {
+      setProfessors(apiProfessors)
+    }
+  }, [apiProfessors])
+
+  // Filter + sort
   useEffect(() => {
     const filtered = professors.filter((p) => {
       const matchesSearch =
         p.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         p.courses.some((c) => c.toLowerCase().includes(searchTerm.toLowerCase()))
+
       const matchesDept = departmentFilter === "all" || p.department === departmentFilter
+
       return matchesSearch && matchesDept
     })
 
@@ -158,61 +109,82 @@ export default function SearchPage() {
           </div>
         </div>
 
-        <div className="space-y-4">
-          {filteredProfessors.length > 0 ? (
-            filteredProfessors.map((professor) => (
-              <div
-                key={professor.id}
-                className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-blue-100 dark:border-blue-900 hover:shadow-lg transition-all flex items-start justify-between animate-fade-in"
-              >
-                <div className="flex gap-6 flex-1">
-                  <img
-                    src={professor.image || "/placeholder.svg"}
-                    alt={professor.name}
-                    className="w-20 h-20 rounded-xl object-cover border-2 border-blue-100 dark:border-blue-900"
-                  />
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold text-primary">{professor.name}</h3>
-                    <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
-                      {professor.faculty_id} • {professor.department}
-                    </p>
-                    <div className="flex items-center gap-2 mb-3">
-                      <div className="flex items-center gap-1">
-                        {[...Array(5)].map((_, i) => (
-                          <Star
+        {/* LIST / STATES */}
+        {loading ? (
+          <div className="text-center py-12 text-gray-600 dark:text-gray-400">
+            Loading professors...
+          </div>
+        ) : error ? (
+          <div className="text-center py-12 text-red-600 dark:text-red-400">
+            Error: {error}
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {filteredProfessors.length > 0 ? (
+              filteredProfessors.map((professor) => (
+                <div
+                  key={professor.id}
+                  className="bg-white dark:bg-slate-800 rounded-2xl p-6 border border-blue-100 dark:border-blue-900 hover:shadow-lg transition-all flex items-start justify-between animate-fade-in"
+                >
+                  <div className="flex gap-6 flex-1">
+                    <img
+                      src={professor.image || "/placeholder.svg"}
+                      alt={professor.name}
+                      className="w-20 h-20 rounded-xl object-cover border-2 border-blue-100 dark:border-blue-900"
+                    />
+                    <div className="flex-1">
+                      <h3 className="text-lg font-bold text-primary">{professor.name}</h3>
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">
+                        {professor.faculty_id} • {professor.department}
+                      </p>
+                      <div className="flex items-center gap-2 mb-3">
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`w-4 h-4 ${
+                                i < Math.floor(professor.rating)
+                                  ? "fill-accent text-accent"
+                                  : "text-gray-300"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                        <span className="font-semibold text-primary">
+                          {professor.rating.toFixed(1)}
+                        </span>
+                        <span className="text-sm text-gray-500">
+                          ({professor.ratingCount})
+                        </span>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {professor.courses.map((course, i) => (
+                          <span
                             key={i}
-                            className={`w-4 h-4 ${i < Math.floor(professor.rating) ? "fill-accent text-accent" : "text-gray-300"}`}
-                          />
+                            className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-primary text-xs rounded-full font-medium"
+                          >
+                            {course}
+                          </span>
                         ))}
                       </div>
-                      <span className="font-semibold text-primary">{professor.rating.toFixed(1)}</span>
-                      <span className="text-sm text-gray-500">({professor.ratingCount})</span>
-                    </div>
-                    <div className="flex flex-wrap gap-2">
-                      {professor.courses.map((course, i) => (
-                        <span
-                          key={i}
-                          className="px-2 py-1 bg-blue-100 dark:bg-blue-900 text-primary text-xs rounded-full font-medium"
-                        >
-                          {course}
-                        </span>
-                      ))}
                     </div>
                   </div>
+                  <Link href={`/professor/${professor.id}`}>
+                    <Button className="bg-primary hover:bg-primary/90 text-white rounded-lg">
+                      View
+                    </Button>
+                  </Link>
                 </div>
-                <Link href={`/professor/${professor.id}`}>
-                  <Button className="bg-primary hover:bg-primary/90 text-white rounded-lg">View</Button>
-                </Link>
+              ))
+            ) : (
+              <div className="text-center py-12">
+                <p className="text-gray-600 dark:text-gray-400 text-lg">
+                  No professors found. Try adjusting your filters.
+                </p>
               </div>
-            ))
-          ) : (
-            <div className="text-center py-12">
-              <p className="text-gray-600 dark:text-gray-400 text-lg">
-                No professors found. Try adjusting your filters.
-              </p>
-            </div>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
     </main>
   )
