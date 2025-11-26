@@ -1,6 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from app.routes import professors, reviews, scraper,auth
+from app.routes import professors, reviews, scraper,auth, ratings
 from app.db import db
 
 app = FastAPI(title="RateMyProfessor API")
@@ -10,7 +10,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -23,7 +23,7 @@ app.include_router(auth.router, prefix="/auth", tags=["Authentication"])
 app.include_router(professors.router, prefix="/professors", tags=["Professors"])
 app.include_router(reviews.router, prefix="/reviews", tags=["Reviews"])
 app.include_router(scraper.router, prefix="/scraper", tags=["Scraper"])
-
+app.include_router(ratings.router, prefix="/ratings", tags=["Ratings"])
 @app.get("/")
 def root():
     return {"message": "Backend running!"}

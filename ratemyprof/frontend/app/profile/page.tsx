@@ -53,7 +53,7 @@ export default function ProfilePage() {
   const handleLogout = async () => {
     try {
       // hit backend to clear HttpOnly cookie
-      await fetch("http://127.0.0.1:8000/auth/logout", {
+      await fetch("http://localhost:8000/auth/logout", {
         method: "POST",
         credentials: "include", // send cookie so backend can delete it
       })
@@ -63,8 +63,7 @@ export default function ProfilePage() {
     }
 
     // clear any local "session" data
-    localStorage.removeItem("user")
-    localStorage.removeItem("user_email")
+
 
     // send user back to login
     router.push("/login")

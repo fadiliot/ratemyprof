@@ -1,20 +1,24 @@
+// components/rating-modal.tsx
 "use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { X, Star } from "lucide-react"
+import type { Professor } from "@/lib/api/professor"
 
-interface Professor {
-  id: number
-  name: string
-  image: string
+export interface RatingValues {
+  teaching_clarity: number
+  communication: number
+  fairness: number
+  engagement: number
+  comment?: string
 }
 
 interface RatingModalProps {
   professor: Professor
   isOpen: boolean
   onClose: () => void
-  onSubmit: () => void
+  onSubmit: (values: RatingValues) => Promise<void> | void
 }
 
 export function RatingModal({ professor, isOpen, onClose, onSubmit }: RatingModalProps) {
@@ -32,16 +36,26 @@ export function RatingModal({ professor, isOpen, onClose, onSubmit }: RatingModa
     { key: "communication", label: "Communication", description: "How well does the professor communicate?" },
     { key: "fairness", label: "Fairness", description: "How fair are the evaluations?" },
     { key: "engagement", label: "Engagement", description: "How engaging is the class?" },
-  ]
+  ] as const
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
-    setTimeout(() => {
-      onSubmit()
+    try {
+      await onSubmit({
+        teaching_clarity: ratings.clarity,
+        communication: ratings.communication,
+        fairness: ratings.fairness,
+        engagement: ratings.engagement,
+        comment: feedback.trim() || undefined,
+      })
+
+      // reset local state after successful submit
       setRatings({ clarity: 0, communication: 0, fairness: 0, engagement: 0 })
       setFeedback("")
+      onClose()
+    } finally {
       setIsSubmitting(false)
-    }, 1000)
+    }
   }
 
   if (!isOpen) return null
@@ -80,12 +94,14 @@ export function RatingModal({ professor, isOpen, onClose, onSubmit }: RatingModa
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
                       key={star}
-                      onClick={() => setRatings({ ...ratings, [criterion.key]: star })}
+                      onClick={() =>
+                        setRatings((prev) => ({ ...prev, [criterion.key]: star }))
+                      }
                       className="p-2 hover:scale-110 transition-transform"
                     >
                       <Star
                         className={`w-8 h-8 transition-all ${
-                          star <= ratings[criterion.key as keyof typeof ratings]
+                          star <= ratings[criterion.key]
                             ? "fill-accent text-accent scale-110"
                             : "text-gray-300 hover:text-accent"
                         }`}
@@ -118,7 +134,10 @@ export function RatingModal({ professor, isOpen, onClose, onSubmit }: RatingModa
             <Button
               onClick={handleSubmit}
               className="flex-1 bg-primary hover:bg-primary/90 text-white rounded-lg font-semibold"
-              disabled={isSubmitting || Object.values(ratings).some((r) => r === 0)}
+              disabled={
+                isSubmitting ||
+                Object.values(ratings).some((r) => r === 0)
+              }
             >
               {isSubmitting ? "Submitting..." : "Submit Rating"}
             </Button>

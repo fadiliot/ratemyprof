@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useState, useEffect } from "react"
-import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -16,72 +15,63 @@ export default function LoginPage() {
   const [checkingSession, setCheckingSession] = useState(true)
   const router = useRouter()
 
-  // 🚫 Block access if user is already "logged in"
+  // 🚫 Block access if user is already logged in (cookie-based)
   useEffect(() => {
-    try {
-      const existingEmail = localStorage.getItem("user_email")
-      if (existingEmail) {
-        // user already logged in → go to dashboard
-        router.replace("/dashboard")
-        return
+    async function checkSession() {
+      try {
+        const res = await fetch("http://localhost:8000/auth/me", {
+          credentials: "include",
+        })
+
+        if (res.ok) {
+          // user already logged in → go to dashboard
+          router.replace("/dashboard")
+          return
+        }
+      } catch (err) {
+        console.error("Error checking session:", err)
+      } finally {
+        setCheckingSession(false)
       }
-    } catch {
-      // ignore localStorage errors
-    } finally {
-      setCheckingSession(false)
     }
+
+    checkSession()
   }, [router])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsLoading(true)
 
-    console.log("➡️ Login Started")
-    console.log("Email:", email)
-    console.log("Password entered:", password.length > 0)
-
     if (
       !(email.endsWith("@srmist.edu.in") || email.endsWith("@ktr.srmuniv.edu.in"))
     ) {
-      console.log("❌ Invalid email domain")
       alert("Please use your official SRM email (@srmist.edu.in or @ktr.srmuniv.edu.in)")
       setIsLoading(false)
       return
     }
 
     try {
-      console.log("🌐 Sending request to backend...")
-
-      const res = await fetch("http://127.0.0.1:8000/auth/login", {
+      const res = await fetch("http://localhost:8000/auth/login", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include", // IMPORTANT for cookies
+        credentials: "include", // 🔑 this sets the HttpOnly cookie
         body: JSON.stringify({ email, password }),
       })
 
-      console.log("📥 Response received:", res)
-      console.log("Status:", res.status)
-
-      const data = await res.json()
-      console.log("📦 Response JSON:", data)
+      const data = await res.json().catch(() => ({}))
 
       if (!res.ok) {
-        console.log("❌ Backend rejected login:", data.detail)
         alert(data.detail || "Login failed")
         setIsLoading(false)
         return
       }
 
-      console.log("✅ Login success, storing email in localStorage")
-      localStorage.setItem("user_email", email)
-
-      console.log("➡️ Attempting redirect to /dashboard")
+      // Cookie is now set → go to dashboard
       router.push("/dashboard")
     } catch (error) {
-      console.error("🔥 ERROR during login:", error)
+      console.error("Login error:", error)
       alert("Unable to connect to backend")
     } finally {
-      console.log("⏹ Login finished")
       setIsLoading(false)
     }
   }

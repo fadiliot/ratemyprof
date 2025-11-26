@@ -5,16 +5,18 @@ ACADEMIA_URL = "https://academia.srmist.edu.in/"
 def verify_srm_login_sync(email: str, password: str):
     with sync_playwright() as p:
         browser = p.chromium.launch(
-            headless=True,   # ✔ run without opening window
-            args=[
-                "--disable-gpu",
-                "--no-sandbox",
-                "--disable-dev-shm-usage",
-                "--disable-blink-features=AutomationControlled",  # ✔ hide automation
-                "--disable-infobars",
-                "--start-maximized"
-            ]
-        )
+    headless=False,       # 👈 show real browser window
+    slow_mo=500,          # 👈 optional: 500ms delay between actions
+    args=[
+        "--disable-gpu",
+        "--no-sandbox",
+        "--disable-dev-shm-usage",
+        "--disable-blink-features=AutomationControlled",
+        "--disable-infobars",
+        "--start-maximized",
+    ],
+)
+
 
         page = browser.new_page(
             user_agent=(

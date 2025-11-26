@@ -1,9 +1,11 @@
-from fastapi import APIRouter, HTTPException, Response
+# app/routes/auth.py
+from fastapi import APIRouter, HTTPException, Response, Cookie, Request
 from fastapi.concurrency import run_in_threadpool
+from datetime import datetime
+
 from app.services.academia_login import verify_srm_login_sync
 from app.db import users_col
-from app.utils.jwt_handler import create_access_token
-from datetime import datetime
+from app.utils.jwt_handler import create_access_token, decode_access_token
 
 router = APIRouter()
 
@@ -19,6 +21,7 @@ async def srm_login(data: dict, response: Response):
         raise HTTPException(status_code=403, detail="Only SRM institutional emails are allowed")
 
     result = await run_in_threadpool(verify_srm_login_sync, email, password)
+
     if result["status"] == "error":
         raise HTTPException(status_code=401, detail=result["message"])
 
@@ -26,7 +29,7 @@ async def srm_login(data: dict, response: Response):
     if not user:
         users_col.insert_one({
             "email": email,
-            "createdAt": datetime.utcnow()
+            "createdAt": datetime.utcnow(),
         })
 
     token = create_access_token(email)
@@ -35,9 +38,9 @@ async def srm_login(data: dict, response: Response):
         key="access_token",
         value=token,
         httponly=True,
-        secure=False,   # True in production with HTTPS
+        secure=False,   # True in production
         samesite="Lax",
-        max_age=60*60*24*7,
+        max_age=60 * 60 * 24 * 7,
     )
 
     return {"message": "Login successful", "email": email}
@@ -45,11 +48,36 @@ async def srm_login(data: dict, response: Response):
 
 @router.post("/logout")
 async def logout(response: Response):
-    # delete cookie on client
     response.delete_cookie(
         key="access_token",
         httponly=True,
-        secure=False,   # match login
+        secure=False,
         samesite="Lax",
     )
     return {"message": "Logout successful"}
+
+
+@router.get("/me")
+async def get_me(request: Request, access_token: str = Cookie(None)):
+    print("🔹 /auth/me called")
+    print("🔹 Raw cookies:", request.cookies)
+    print("🔹 access_token param:", access_token)
+
+    if not access_token:
+        print("🔴 No access_token cookie, returning 401")
+        raise HTTPException(status_code=401, detail="Not authenticated")
+
+    try:
+        payload = decode_access_token(access_token)
+        print("🔹 Decoded payload:", payload)
+    except Exception as e:
+        print("🔴 Error decoding token:", repr(e))
+        raise HTTPException(status_code=401, detail="Invalid or expired token")
+
+    email = payload.get("sub")
+    if not email:
+        print("🔴 No 'sub' in payload")
+        raise HTTPException(status_code=401, detail="Invalid token payload")
+
+    print("✅ Authenticated as:", email)
+    return {"email": email}

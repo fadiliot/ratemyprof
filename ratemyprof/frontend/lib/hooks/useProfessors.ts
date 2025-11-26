@@ -21,6 +21,7 @@ export function useProfessors() {
         }
       })
       .catch((err) => {
+        console.error("Error fetching professors:", err)
         if (mounted) {
           setError(err.message)
           setLoading(false)
